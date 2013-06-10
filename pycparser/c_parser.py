@@ -20,9 +20,7 @@ class CParser(PLYParser):
     def __init__(
             self,
             lex_optimize=True,
-            lextab='pycparser.lextab',
             yacc_optimize=True,
-            yacctab='pycparser.yacctab',
             yacc_debug=False):
         """ Create a new CParser.
 
@@ -34,19 +32,8 @@ class CParser(PLYParser):
             *) When releasing a stable parser, set to True
 
             lex_optimize:
-                Set to False when you're modifying the lexer.
-                Otherwise, changes in the lexer won't be used, if
-                some lextab.py file exists.
-                When releasing with a stable lexer, set to True
-                to save the re-generation of the lexer table on
-                each run.
-
-            lextab:
-                Points to the lex table that's used for optimized
-                mode. Only if you're modifying the lexer and want
-                some tests to avoid re-generating the table, make
-                this point to a local lex table file (that's been
-                earlier generated with lex_optimize=True)
+                Disables some additional validations inside the
+                lexer.
 
             yacc_optimize:
                 Set to False when you're modifying the parser.
@@ -55,11 +42,6 @@ class CParser(PLYParser):
                 When releasing with a stable parser, set to True
                 to save the re-generation of the parser table on
                 each run.
-
-            yacctab:
-                Points to the yacc table that's used for optimized
-                mode. Only if you're modifying the parser, make
-                this point to a local yacc table file
 
             yacc_debug:
                 Generate a parser.out file that explains how yacc
@@ -70,8 +52,7 @@ class CParser(PLYParser):
             type_lookup_func=self._lex_type_lookup_func)
 
         self.clex.build(
-            optimize=lex_optimize,
-            lextab=lextab)
+            optimize=lex_optimize)
         self.tokens = self.clex.tokens
 
         rules_with_opt = [
@@ -98,7 +79,8 @@ class CParser(PLYParser):
             start='translation_unit_or_empty',
             debug=yacc_debug,
             optimize=yacc_optimize,
-            tabmodule=yacctab)
+            write_tables=False,
+            tabmodule=False)
 
         # Stack of scopes for keeping track of typedefs. _scope_stack[-1] is
         # the current (topmost) scope.

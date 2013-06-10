@@ -9,8 +9,7 @@ from pycparser import c_parser, c_generator
 _c_parser = c_parser.CParser(
                 lex_optimize=False,
                 yacc_debug=True,
-                yacc_optimize=False,
-                yacctab='yacctab')
+                yacc_optimize=False)
 
 
 def compare_asts(ast1, ast2):
