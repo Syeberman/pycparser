@@ -1585,6 +1585,36 @@ class TestCParser_typenames(TestCParser_base):
         self.assertEqual(expand_decl(s2_ast.ext[1].body.block_items[0]),
             ['Decl', 'TT', ['TypeDecl', ['IdentifierType', ['unsigned']]]])
 
+        # before the second local variable, TT is a type; after, it's a
+        # variable
+        s3 = r'''
+            typedef char TT;
+            void foo(void) {
+              TT tt = sizeof(TT);
+              unsigned TT = 10;
+            }
+            '''
+        s3_ast = self.parse(s3)
+        self.assertEqual(expand_decl(s3_ast.ext[1].body.block_items[0]),
+            ['Decl', 'tt', ['TypeDecl', ['IdentifierType', ['TT']]]])
+        self.assertEqual(expand_decl(s3_ast.ext[1].body.block_items[1]),
+            ['Decl', 'TT', ['TypeDecl', ['IdentifierType', ['unsigned']]]])
+
+        # a variable and its type can even share the same name
+        s4 = r'''
+            typedef char TT;
+            void foo(void) {
+              TT TT = sizeof(TT);
+              unsigned uu = TT * 2;
+            }
+            '''
+        s4_ast = self.parse(s4)
+        self.assertEqual(expand_decl(s4_ast.ext[1].body.block_items[0]),
+            ['Decl', 'TT', ['TypeDecl', ['IdentifierType', ['TT']]]])
+        self.assertEqual(expand_decl(s4_ast.ext[1].body.block_items[1]),
+            ['Decl', 'uu', ['TypeDecl', ['IdentifierType', ['unsigned']]]])
+
+
     def test_parameter_reuse_typedef_name(self):
         # identifiers can be reused as parameter names; parameter name scope
         # begins and ends with the function body; it's important that TT is
