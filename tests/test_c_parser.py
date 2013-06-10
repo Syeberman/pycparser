@@ -14,8 +14,7 @@ from pycparser.c_parser import CParser, Coord, ParseError
 _c_parser = c_parser.CParser(
                 lex_optimize=False,
                 yacc_debug=True,
-                yacc_optimize=False,
-                yacctab='yacctab')
+                yacc_optimize=False)
 
 
 def expand_decl(decl):
