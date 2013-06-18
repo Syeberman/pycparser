@@ -6,7 +6,7 @@
 # Copyright (C) 2008-2012, Eli Bendersky
 # License: BSD
 #------------------------------------------------------------------------------
-import re, inspect
+import re
 
 from .ply import yacc
 
@@ -108,6 +108,9 @@ class CParser(PLYParser):
         #
         self._scope_stack = [dict()]
 
+        # Keeps track of the last token given to yacc (the lookahead token)
+        self._last_yielded_token = None
+
     def parse(self, text, filename='', debuglevel=0):
         """ Parses C code and returns an AST.
 
@@ -124,7 +127,12 @@ class CParser(PLYParser):
         self.clex.filename = filename
         self.clex.reset_lineno()
         self._scope_stack = [dict()]
-        return self.cparser.parse(text, lexer=self.clex, debug=debuglevel)
+        self._last_yielded_token = None
+        return self.cparser.parse(
+                input=text,
+                lexer=self.clex,
+                tokenfunc=self._yacc_tokenfunc,
+                debug=debuglevel)
 
     ######################--   PRIVATE   --######################
 
@@ -185,17 +193,16 @@ class CParser(PLYParser):
         #~ print("Type lookup:", name, is_type, self._scope_stack)
         return is_type
 
+    def _yacc_tokenfunc(self):
+        self._last_yielded_token = self.clex.token( )
+        return self._last_yielded_token
+
     def _get_yacc_lookahead_token(self):
-        """ We need access to yacc.py's lookahead token in certain cases. This
-            is the least error-prone method, but must be called only in very
-            specific circumstances.
+        """ We need access to yacc.py's lookahead token in certain cases. We
+            keep track of the last token read by yacc, which is lookahead
+            unless some sort of error recovery was attempted.            
         """
-        # TODO Best method is to modify the pycparser.ply module to expose
-        # lookahead as an attribute of the parser, at the cost of having to
-        # merge, rather than copy, future changes from standard ply
-        yacc_frame = inspect.currentframe().f_back.f_back
-        assert len(yacc_frame.f_locals["lookaheadstack"]) == 0
-        return yacc_frame.f_locals["lookahead"]
+        return self._last_yielded_token
 
     # To understand what's going on here, read sections A.8.5 and
     # A.8.6 of K&R2 very carefully.
@@ -1585,6 +1592,9 @@ class CParser(PLYParser):
         p[0] = None
 
     def p_error(self, p):
+        # If error recovery is added here in the future, make sure
+        # _get_yacc_lookahead_token still works!
+        #
         if p:
             self._parse_error(
                 'before: %s' % p.value,
