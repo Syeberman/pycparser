@@ -1614,6 +1614,16 @@ class TestCParser_typenames(TestCParser_base):
         self.assertEqual(expand_decl(s4_ast.ext[1].body.block_items[1]),
             ['Decl', 'uu', ['TypeDecl', ['IdentifierType', ['unsigned']]]])
 
+        # ensure an error is raised if a type, redeclared as a variable, is
+        # used as a type
+        s5 = r'''
+            typedef char TT;
+            void foo(void) {
+              unsigned TT = 10;
+              TT erroneous = 20;
+            }
+            '''
+        self.assertRaises(ParseError, self.parse, s5)
 
     def test_parameter_reuse_typedef_name(self):
         # identifiers can be reused as parameter names; parameter name scope
@@ -1650,6 +1660,16 @@ class TestCParser_typenames(TestCParser_base):
                     [   ['Decl', 'TT', ['TypeDecl', ['IdentifierType', ['unsigned']]]],
                         ['Decl', 'bar', ['TypeDecl', ['IdentifierType', ['TT']]]]],
                     ['TypeDecl', ['IdentifierType', ['void']]]]])
+
+        # ensure an error is raised if a type, redeclared as a parameter, is
+        # used as a type
+        s3 = r'''
+            typedef char TT;
+            void foo(unsigned TT, TT bar) {
+              TT erroneous = 20;
+            }
+            '''
+        self.assertRaises(ParseError, self.parse, s3)
 
     def test_nested_function_decls(self):
         # parameter names of nested function declarations must not escape into
