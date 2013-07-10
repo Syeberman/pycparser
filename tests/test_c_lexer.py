@@ -51,6 +51,7 @@ class TestCLexerNoErrors(unittest.TestCase):
         self.assertTokensTypes('++', ['PLUSPLUS'])
         self.assertTokensTypes('case int', ['CASE', 'INT'])
         self.assertTokensTypes('caseint', ['ID'])
+        self.assertTokensTypes('$dollar cent$', ['ID', 'ID'])
         self.assertTokensTypes('i ^= 1;', ['ID', 'XOREQUAL', 'INT_CONST_DEC', 'SEMI'])
 
     def test_id_typeid(self):
@@ -61,9 +62,14 @@ class TestCLexerNoErrors(unittest.TestCase):
     def test_integer_constants(self):
         self.assertTokensTypes('12', ['INT_CONST_DEC'])
         self.assertTokensTypes('12u', ['INT_CONST_DEC'])
+        self.assertTokensTypes('12l', ['INT_CONST_DEC'])
         self.assertTokensTypes('199872Ul', ['INT_CONST_DEC'])
+        self.assertTokensTypes('199872lU', ['INT_CONST_DEC'])
         self.assertTokensTypes('199872LL', ['INT_CONST_DEC'])
         self.assertTokensTypes('199872ull', ['INT_CONST_DEC'])
+        self.assertTokensTypes('199872llu', ['INT_CONST_DEC'])
+        self.assertTokensTypes('1009843200000uLL', ['INT_CONST_DEC'])
+        self.assertTokensTypes('1009843200000LLu', ['INT_CONST_DEC'])
 
         self.assertTokensTypes('077', ['INT_CONST_OCT'])
         self.assertTokensTypes('0123456L', ['INT_CONST_OCT'])
@@ -367,7 +373,6 @@ class TestCLexerErrors(unittest.TestCase):
 
     def test_trivial_tokens(self):
         self.assertLexerError('@', ERR_ILLEGAL_CHAR)
-        self.assertLexerError('$', ERR_ILLEGAL_CHAR)
         self.assertLexerError('`', ERR_ILLEGAL_CHAR)
         self.assertLexerError('\\', ERR_ILLEGAL_CHAR)
 

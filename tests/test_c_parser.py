@@ -260,6 +260,15 @@ class TestCParser_fundamentals(TestCParser_base):
                     ],
                 ['TypeDecl', ['IdentifierType', ['int']]]]])
 
+        # function return values and parameters may not have type information
+        self.assertEqual(self.get_decl('extern foobar(foo, bar);'),
+            ['Decl', 'foobar',
+                ['FuncDecl',
+                    [   ['ID', 'foo'],
+                        ['ID', 'bar']
+                    ],
+                ['TypeDecl', ['IdentifierType', ['int']]]]])
+
     def test_nested_decls(self): # the fun begins
         self.assertEqual(self.get_decl('char** ar2D;'),
             ['Decl', 'ar2D',
@@ -1130,6 +1139,20 @@ class TestCParser_fundamentals(TestCParser_base):
         self.assertEqual(expand_decl(f3.param_decls[1]),
             ['Decl', 'c', ['PtrDecl', ['TypeDecl', ['IdentifierType', ['long']]]]])
 
+        # function return values and parameters may not have type information
+        f4 = parse_fdef('''
+        que(p)
+        {
+            return 3;
+        }
+        ''')
+
+        self.assertEqual(fdef_decl(f4),
+            ['Decl', 'que',
+                ['FuncDecl',
+                    [['ID', 'p']],
+                    ['TypeDecl', ['IdentifierType', ['int']]]]])
+
     def test_unified_string_literals(self):
         # simple string, for reference
         d1 = self.get_decl_init('char* s = "hello";')
@@ -1264,6 +1287,19 @@ class TestCParser_whole_code(TestCParser_base):
 
         e2 = r'''char n = '\n', *prefix = "st_";'''
         self.assert_all_Constants(e2, [r"'\n'", '"st_"'])
+
+        s1 = r'''int main() {
+                    int i = 5, j = 6, k = 1;
+                    if ((i=j && k == 1) || k > j)
+                        printf("Hello, world\n");
+                    return 0;
+                 }'''
+        ps1 = self.parse(s1)
+        self.assert_all_Constants(ps1,
+            ['5', '6', '1', '1', '"Hello, world\\n"', '0'])
+        self.assert_num_ID_refs(ps1, 'i', 1)
+        self.assert_num_ID_refs(ps1, 'j', 2)
+
 
     def test_statements(self):
         s1 = r'''

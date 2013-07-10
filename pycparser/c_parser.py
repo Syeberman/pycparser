@@ -138,12 +138,10 @@ class CParser(PLYParser):
 
     def _push_scope(self):
         self._scope_stack.append(dict())
-        #~ print("Push scope:", self._scope_stack)
 
     def _pop_scope(self):
         assert len(self._scope_stack) > 1
         self._scope_stack.pop()
-        #~ print("Pop scope:", self._scope_stack)
 
     def _add_typedef_name(self, name, coord):
         """ Add a new typedef name (ie a TYPEID) to the current scope
@@ -153,7 +151,6 @@ class CParser(PLYParser):
                 "Typedef %r previously declared as non-typedef "
                 "in this scope" % name, coord)
         self._scope_stack[-1][name] = True
-        #~ print("New TYPEID:", name, self._scope_stack)
 
     def _add_identifier(self, name, coord):
         """ Add a new object, function, or enum member name (ie an ID) to the
@@ -164,7 +161,6 @@ class CParser(PLYParser):
                 "Non-typedef %r previously declared as typedef "
                 "in this scope" % name, coord)
         self._scope_stack[-1][name] = False
-        #~ print("New ID:", name, self._scope_stack)
 
     def _is_type_in_scope(self, name):
         """ Is *name* a typedef-name in the current scope?
@@ -190,7 +186,6 @@ class CParser(PLYParser):
             are types.
         """
         is_type = self._is_type_in_scope(name)
-        #~ print("Type lookup:", name, is_type, self._scope_stack)
         return is_type
 
     def _yacc_tokenfunc(self):
@@ -323,11 +318,22 @@ class CParser(PLYParser):
                     type.type = tn
                     return decl
 
-        # At this point, we know that typename is a list of IdentifierType
-        # nodes. Concatenate all the names into a single list.
-        type.type = c_ast.IdentifierType(
-            [name for id in typename for name in id.names],
-            coord=typename[0].coord)
+        if not typename:
+            # Functions default to returning int
+            #
+            if not isinstance(decl.type, c_ast.FuncDecl):
+                self._parse_error(
+                        "Missing type in declaration", decl.coord)
+            type.type = c_ast.IdentifierType(
+                    ['int'],
+                    coord=decl.coord)
+        else:
+            # At this point, we know that typename is a list of IdentifierType
+            # nodes. Concatenate all the names into a single list.
+            #
+            type.type = c_ast.IdentifierType(
+                [name for id in typename for name in id.names],
+                coord=typename[0].coord)
         return decl
 
     def _add_declaration_specifier(self, declspec, newspec, kind):
@@ -545,8 +551,13 @@ class CParser(PLYParser):
     def p_function_definition_1(self, p):
         """ function_definition : declarator declaration_list_opt compound_statement
         """
-        # no declaration specifiers
-        spec = dict(qual=[], storage=[], type=[], function=[])
+        # no declaration specifiers - 'int' becomes the default type
+        spec = dict(
+            qual=[],
+            storage=[],
+            type=[c_ast.IdentifierType(['int'],
+                                       coord=self._coord(p.lineno(1)))],
+            function=[])
 
         p[0] = self._build_function_definition(
             spec=spec,
